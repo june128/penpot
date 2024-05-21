@@ -300,6 +300,7 @@
 
 (defn convert-to-draft
   [root]
+  (prn root)
   (letfn [(process-attr [children ranges [k v]]
             (loop [children (seq children)
                    start    nil

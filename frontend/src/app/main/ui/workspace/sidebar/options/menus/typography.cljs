@@ -420,15 +420,15 @@
 
 (mf/defc text-options
   {::mf/wrap-props false}
-  [{:keys [ids editor values on-change on-blur show-recent]}]
+  [{:keys [ids values on-change on-blur show-recent]}]
   (let [full-size-selector? (and show-recent (= (mf/use-ctx ctx/sidebar) :right))
-        opts #js {:editor editor
-                  :ids ids
+        opts #js {:ids ids
                   :values values
                   :on-change on-change
                   :on-blur on-blur
                   :show-recent show-recent
                   :full-size-selector full-size-selector?}]
+    (js/console.log "values" values)
     [:div {:class (stl/css-case :text-options true
                                 :text-options-full-size full-size-selector?)}
      [:> font-options opts]
