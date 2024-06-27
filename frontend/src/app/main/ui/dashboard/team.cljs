@@ -165,7 +165,7 @@
                       (modal/hide))
 
             (and (= :validation type)
-                 (or (= :member-is-muted code)
+                 (or (= :profile-is-muted code)
                      (= :email-has-permanent-bounces code)))
             (swap! error-text (tr "errors.email-spam-or-permanent-bounces" (:email error)))
 
@@ -570,7 +570,7 @@
              (rx/of (msg/error (tr "errors.profile-is-muted")))
 
              (and (= :validation type)
-                  (= :member-is-muted code))
+                  (= :profile-is-muted code))
              (rx/of (msg/error (tr "errors.member-is-muted")))
 
              (and (= :validation type)

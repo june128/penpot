@@ -1,0 +1,10 @@
+Hello!
+
+{{requested-by|abbreviate:25}} ({{requested-by-email}}) has asked to join your team “{{ team|abbreviate:25 }}”.
+
+You can add people to your team on
+
+{{ public-uri }}/#/dashboard/team/{{team-id}}/invitations
+
+Enjoy!
+The Penpot team.

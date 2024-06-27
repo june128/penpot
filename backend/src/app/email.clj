@@ -15,6 +15,7 @@
    [app.db :as db]
    [app.db.sql :as sql]
    [app.email.invite-to-team :as-alias email.invite-to-team]
+   [app.email.request-team-access :as-alias email.request-team-access]
    [app.metrics :as mtx]
    [app.util.template :as tmpl]
    [app.worker :as wrk]
@@ -398,6 +399,21 @@
 (def invite-to-team
   "Teams member invitation email."
   (template-factory ::invite-to-team))
+
+(s/def ::email.request-team-access/requested-by ::us/string)
+(s/def ::email.request-team-access/requested-by-email ::us/string)
+(s/def ::email.request-team-access/team ::us/string)
+(s/def ::email.request-team-access/team-id ::us/string)
+
+(s/def ::request-team-access
+  (s/keys :req-un [::email.request-team-access/requested-by
+                   ::email.request-team-access/requested-by-email
+                   ::email.request-team-access/team
+                   ::email.request-team-access/team-id]))
+
+(def request-team-access
+  "Team access request email."
+  (template-factory ::request-team-access))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; BOUNCE/COMPLAINS HELPERS

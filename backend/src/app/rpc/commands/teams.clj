@@ -80,6 +80,23 @@
   (cond-> row
     (some? features) (assoc :features (db/decode-pgarray features #{}))))
 
+(defn- check-valid-email-muted [conn profile show?]
+  (let [email  (profile/clean-email (:email profile))]
+    ;; check if the profile has reported repeatedly as spam or has bounces.
+    (when (and profile (not (eml/allow-send-emails? conn profile)))
+      (ex/raise :type :validation
+                :code :profile-is-muted
+                :email (if show? email "private")
+                :hint "this email has reported repeatedly as spam or has bounces"))))
+
+(defn- check-valid-email-bounce [conn email show?]
+  ;; check if the email is part of the global spam/bounce report.
+  (when (eml/has-bounce-reports? conn email)
+    (ex/raise :type :validation
+              :code :email-has-permanent-bounces
+              :email (if show? email "private")
+              :hint "this email has been repeatedly reported as spam or bounce")))
+
 ;; --- Query: Teams
 
 (declare get-teams)
@@ -726,18 +743,8 @@
   (let [email  (profile/clean-email email)
         member (profile/get-profile-by-email conn email)]
 
-    (when (and member (not (eml/allow-send-emails? conn member)))
-      (ex/raise :type :validation
-                :code :member-is-muted
-                :email email
-                :hint "the profile has reported repeatedly as spam or has bounces"))
-
-    ;; Secondly check if the invited member email is part of the global spam/bounce report.
-    (when (eml/has-bounce-reports? conn email)
-      (ex/raise :type :validation
-                :code :email-has-permanent-bounces
-                :email email
-                :hint "the email you invite has been repeatedly reported as spam or bounce"))
+    (check-valid-email-muted conn member true)
+    (check-valid-email-bounce conn email true)
 
     ;; When we have email verification disabled and invitation user is
     ;; already present in the database, we proceed to add it to the
@@ -1004,3 +1011,100 @@
                                     :email-to (profile/clean-email email)}
                                    {::db/return-keys true})]
         (rph/wrap nil {::audit/props {:invitation-id (:id invitation)}})))))
+
+
+
+;; --- Mutation: Request Team Invitation
+
+(def sql:upsert-team-request
+  "insert into team_request(id, team_id, requester_id, valid_until)
+   values (?, ?, ?, ?)
+       on conflict(id) do
+          update set valid_until = ?, updated_at = now()
+   returning *")
+
+
+(def sql:team-request
+  "select id, (valid_until < now()) as expired
+   from team_request where team_id = ? and requester_id = ?")
+
+(def sql:team-owner
+  "select profile_id
+   from team_profile_rel where team_id = ? and is_owner = 't'")
+
+
+(defn- create-team-request
+  [{:keys [::db/conn] :as cfg} {:keys [team requester team-owner] :as params}]
+  (let [old-request (->> (db/exec! conn [sql:team-request (:id team) (:id requester)])
+                         (map decode-row)
+                         (first))]
+    (when (false? (:expired old-request))
+      (ex/raise :type :validation
+                :code :request-already-sent
+                :hint "you have already made a request to join this team less than 24 hours ago"))
+
+    (let [id         (or (:id old-request) (uuid/next))
+          expire     (dt/in-future "24h")
+
+          request    (db/exec-one! conn [sql:upsert-team-request
+                                         id (:id team) (:id requester) expire
+                                         expire])]
+
+      ;; TODO needs audit?
+
+      (eml/send! {::eml/conn conn
+                  ::eml/factory eml/request-team-access
+                  :public-uri (cf/get :public-uri)
+                  :to (:email team-owner)
+                  :requested-by (:fullname requester)
+                  :requested-by-email (:email requester)
+                  :team (:name team)
+                  :team-id (:id team)})
+      request)))
+
+(def ^:private schema:create-team-request
+  [:map {:title "create-team-request"}
+   [:team-id ::sm/uuid]])
+
+(sv/defmethod ::create-team-request
+  "A rpc call that allow to request for an invitations to join the team."
+  {::doc/added "2.2.0"
+   ::sm/params schema:create-team-request}
+  [{:keys [::db/pool] :as cfg} {:keys [::rpc/profile-id team-id] :as params}]
+  (db/with-atomic [conn pool]
+    (let [requester   (db/get-by-id conn :profile profile-id)
+          team        (db/get-by-id conn :team team-id)
+          owner-id    (->> (db/exec! conn [sql:team-owner (:id team)])
+                           (map decode-row)
+                           (first)
+                           :profile-id)
+          team-owner  (db/get-by-id conn :profile owner-id)]
+
+      ;;TODO needs quotes?
+
+      #_(run! (partial quotes/check-quote! conn)
+              (list {::quotes/id ::quotes/invitations-per-team
+                     ::quotes/profile-id profile-id
+                     ::quotes/team-id (:id team)
+                     ::quotes/incr (count emails)}
+                    {::quotes/id ::quotes/profiles-per-team
+                     ::quotes/profile-id profile-id
+                     ::quotes/team-id (:id team)
+                     ::quotes/incr (count emails)}))
+
+      (when (or (nil? requester) (nil? team) (nil? team-owner))
+        (ex/raise :type :validation
+                  :code :invalid-parameters))
+
+      ;; Check that the requester is not muted
+      (check-valid-email-muted conn requester true)
+
+      ;; Check that the owner is not marked as bounce
+      (check-valid-email-bounce conn (:email team-owner) false)
+
+      (let [cfg     (assoc cfg ::db/conn conn)
+            request (create-team-request
+                     cfg {:team team :requester requester :team-owner team-owner})]
+        (when request
+          (with-meta {:request request}
+            {::audit/props {:request 1}}))))))
