@@ -10,6 +10,7 @@
    [app.common.data :as d]
    [app.common.pprint :as pp]
    [app.common.uri :as u]
+   [app.main.data.common :as dc]
    [app.main.data.events :as ev]
    [app.main.store :as st]
    [app.main.ui.icons :as i]
@@ -152,8 +153,14 @@
   [{:keys [data route] :as props}]
   (let [type (:type data)
         path (:path route)
-        query-params (u/map->query-string (:query-params route))]
-    (st/emit! (ptk/event ::ev/event {::ev/name "exception-page" :type type :path path :query-params query-params}))
+        query-params (u/map->query-string (:query-params route))
+        pparams      (:path-params route)
+        on-info (fn[info]
+                 (prn "oninfo-> " info))]
+    (st/emit!
+     (ptk/event ::ev/event {::ev/name "exception-page" :type type :path path :query-params query-params})
+     (when (and (:file-id pparams) (:project-id pparams))
+                (dc/get-file-info on-info {:id (:file-id pparams) :project-id (:project-id pparams)} )))
     (case (:type data)
       :not-found
       [:& not-found]

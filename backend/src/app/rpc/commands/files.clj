@@ -739,6 +739,25 @@
   [cfg {:keys [::rpc/profile-id] :as params}]
   (db/tx-run! cfg get-file-summary (assoc params :profile-id profile-id)))
 
+
+;; --- COMMAND QUERY: get-file-info
+
+(defn- get-file-info
+  [{:keys [::db/conn] :as cfg} {:keys [id] :as params}]
+  (let [file (try
+               (get-minimal-file cfg id)
+               (catch Exception _ex
+                 nil))]
+    (binding [pmap/*load-fn* (partial feat.fdata/load-pointer cfg id)]
+      {:id (:id file)})))
+
+(sv/defmethod ::get-file-info
+  "Retrieve file info by its ID."
+  {::doc/added "2.2.0"
+   ::sm/params schema:get-file}
+  [cfg params]
+  (db/tx-run! cfg get-file-info params))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; MUTATION COMMANDS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

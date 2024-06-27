@@ -141,3 +141,14 @@
                          :files files
                          :binary? binary?}))))))))
 
+;;;;;;;;;;;;;;;;;;;;;;
+;; File info
+;;;;;;;;;;;;;;;;;;;;;;
+
+(defn get-file-info
+  [on-info params]
+  (ptk/reify ::get-file-info
+    ptk/WatchEvent
+    (watch [_ _ _]
+      (->> (rp/cmd! :get-file-info params)
+           (rx/map on-info)))))
