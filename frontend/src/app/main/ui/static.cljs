@@ -45,10 +45,14 @@
    [:div {:class (stl/css :desc-message)} (tr "errors.invite-invalid.info")]])
 
 (mf/defc not-found
-  []
+  {::mf/props :obj}
+  [{:keys [file-id] :as props}]
+
   [:> error-container {}
    [:div {:class (stl/css :main-message)} (tr "labels.not-found.main-message")]
-   [:div {:class (stl/css :desc-message)} (tr "labels.not-found.desc-message")]])
+   [:div {:class (stl/css :desc-message)} (tr "labels.not-found.desc-message")]
+   (when file-id
+     [:div "Request access for file: " file-id])])
 
 (mf/defc bad-gateway
   []
@@ -151,19 +155,29 @@
 (mf/defc exception-page
   {::mf/props :obj}
   [{:keys [data route] :as props}]
-  (let [type (:type data)
-        path (:path route)
+  (let [file-info    (mf/use-state {:pending true})
+        type         (:type data)
+        path         (:path route)
         query-params (u/map->query-string (:query-params route))
         pparams      (:path-params route)
-        on-info (fn[info]
-                 (prn "oninfo-> " info))]
+        on-info      (mf/use-fn
+                      (fn [info]
+                        (let [id (:file-id info)
+
+                              _ (prn id (not (nil? id)))
+                              id (cond-> id
+                                   (some? id)
+                                   str)
+                               _ (prn "despues" id (not (nil? id)))]
+                          (reset! file-info {:file-id id}))))
+        _ (prn @file-info)]
     (st/emit!
      (ptk/event ::ev/event {::ev/name "exception-page" :type type :path path :query-params query-params})
-     (when (and (:file-id pparams) (:project-id pparams))
-                (dc/get-file-info on-info {:id (:file-id pparams) :project-id (:project-id pparams)} )))
+     (when (and (:file-id pparams) (:project-id pparams) (:pending @file-info))
+       (dc/get-file-info on-info {:id (:file-id pparams) :project-id (:project-id pparams)})))
     (case (:type data)
       :not-found
-      [:& not-found]
+      [:& not-found @file-info]
 
       :bad-gateway
       [:& bad-gateway]

@@ -749,7 +749,7 @@
                (catch Exception _ex
                  nil))]
     (binding [pmap/*load-fn* (partial feat.fdata/load-pointer cfg id)]
-      {:id (:id file)})))
+      {:file-id (:id file)})))
 
 (sv/defmethod ::get-file-info
   "Retrieve file info by its ID."
