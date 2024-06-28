@@ -1059,26 +1059,27 @@
                   :requested-by (:fullname requester)
                   :requested-by-email (:email requester)
                   :team (:name team)
-                  :team-id (:id team)})
+                  :team-id (str (:id team))})
       request)))
 
 (def ^:private schema:create-team-request
   [:map {:title "create-team-request"}
-   [:team-id ::sm/uuid]])
+   [:file-id ::sm/uuid]])
 
 (sv/defmethod ::create-team-request
   "A rpc call that allow to request for an invitations to join the team."
   {::doc/added "2.2.0"
    ::sm/params schema:create-team-request}
-  [{:keys [::db/pool] :as cfg} {:keys [::rpc/profile-id team-id] :as params}]
+  [{:keys [::db/pool] :as cfg} {:keys [::rpc/profile-id file-id] :as params}]
   (db/with-atomic [conn pool]
-    (let [requester   (db/get-by-id conn :profile profile-id)
-          team        (db/get-by-id conn :team team-id)
-          owner-id    (->> (db/exec! conn [sql:team-owner (:id team)])
-                           (map decode-row)
-                           (first)
-                           :profile-id)
-          team-owner  (db/get-by-id conn :profile owner-id)]
+    (let [requester     (db/get-by-id conn :profile profile-id)
+          {team-id :id} (get-team-for-file conn file-id)
+          team          (db/get-by-id conn :team team-id)
+          owner-id      (->> (db/exec! conn [sql:team-owner (:id team)])
+                             (map decode-row)
+                             (first)
+                             :profile-id)
+          team-owner    (db/get-by-id conn :profile owner-id)]
 
       ;;TODO needs quotes?
 

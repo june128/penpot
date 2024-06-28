@@ -45,14 +45,27 @@
    [:div {:class (stl/css :desc-message)} (tr "errors.invite-invalid.info")]])
 
 (mf/defc not-found
-  {::mf/props :obj}
   [{:keys [file-id] :as props}]
+  (let [requested (mf/use-state false)
+        on-request-access
+        (mf/use-fn
+         (mf/deps file-id)
+         (fn []
+           (let [params {:file-id file-id}
+                 mdata  {:on-success #(reset! requested true)}]
+             (st/emit! (dc/create-team-request (with-meta params mdata))))))]
 
-  [:> error-container {}
-   [:div {:class (stl/css :main-message)} (tr "labels.not-found.main-message")]
-   [:div {:class (stl/css :desc-message)} (tr "labels.not-found.desc-message")]
-   (when file-id
-     [:div "Request access for file: " file-id])])
+    [:> error-container {}
+     [:div {:class (stl/css :main-message)} (tr "labels.not-found.main-message")]
+     [:div {:class (stl/css :desc-message)} (tr "labels.not-found.desc-message")]
+     (when (not= file-id "")
+       (if @requested
+         [:div "Request done!"]
+
+         [:*
+          [:div "Request access for file: " file-id]
+          [:div {:class (stl/css :sign-info)}
+           [:button {:on-click on-request-access} "Request"]]]))]))
 
 (mf/defc bad-gateway
   []
@@ -162,15 +175,7 @@
         pparams      (:path-params route)
         on-info      (mf/use-fn
                       (fn [info]
-                        (let [id (:file-id info)
-
-                              _ (prn id (not (nil? id)))
-                              id (cond-> id
-                                   (some? id)
-                                   str)
-                               _ (prn "despues" id (not (nil? id)))]
-                          (reset! file-info {:file-id id}))))
-        _ (prn @file-info)]
+                        (reset! file-info {:file-id (str (:file-id info))})))]
     (st/emit!
      (ptk/event ::ev/event {::ev/name "exception-page" :type type :path path :query-params query-params})
      (when (and (:file-id pparams) (:project-id pparams) (:pending @file-info))

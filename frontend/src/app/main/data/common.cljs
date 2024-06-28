@@ -152,3 +152,17 @@
     (watch [_ _ _]
       (->> (rp/cmd! :get-file-info params)
            (rx/map on-info)))))
+
+
+
+(defn create-team-request
+  [{:keys [file-id] :as params}]
+  (ptk/reify ::create-team-request
+    ptk/WatchEvent
+    (watch [_ _ _]
+      (let [{:keys [on-success on-error]
+             :or {on-success identity
+                  on-error rx/throw}} (meta params)]
+        (->> (rp/cmd! :create-team-request params)
+             (rx/tap on-success)
+             (rx/catch on-error))))))

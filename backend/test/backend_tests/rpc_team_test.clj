@@ -473,9 +473,14 @@
     (let [owner      (th/create-profile* 1 {:is-active true :email "owner@bar.com"})
           requester  (th/create-profile* 3 {:is-active true :email "requester@bar.com"})
           team       (th/create-team* 1 {:profile-id (:id owner)})
+          proj       (th/create-project* 1 {:profile-id (:id owner)
+                                            :team-id (:id team)})
+          file       (th/create-file* 1 {:profile-id (:id owner)
+                                         :project-id (:id proj)})
+
           data       {::th/type :create-team-request
                       ::rpc/profile-id (:id requester)
-                      :team-id (:id team)}]
+                      :file-id (:id file)}]
 
       ;; request success
       (let [out        (th/command! data)
@@ -483,7 +488,7 @@
             request    (db/exec-one!
                         th/*pool*
                         ["select count(*) as num from team_request where team_id = ? and requester_id = ?"
-                         (:team-id data) (:id requester)])]
+                         (:id team) (:id requester)])]
 
         (t/is (th/success? out))
         (t/is (= 1 (:call-count @mock)))
@@ -505,8 +510,8 @@
 
       (db/exec-one!
        th/*pool*
-       ["update team_request set valid_until = ? where  team_id = ? and requester_id = ?"
-        (dt/in-past "1h") (:team-id data) (:id requester)])
+       ["update team_request set valid_until = ? where team_id = ? and requester_id = ?"
+        (dt/in-past "1h") (:id team) (:id requester)])
 
       (t/is (th/success? (th/command! data)))
       (t/is (= 1 (:call-count @mock))))))
@@ -517,10 +522,14 @@
     (let [owner       (th/create-profile* 1 {:is-active true :is-muted true :email "owner@bar.com"})
           requester   (th/create-profile* 2 {:is-active true :email "requester@bar.com"})
           team        (th/create-team* 1 {:profile-id (:id owner)})
+          proj        (th/create-project* 1 {:profile-id (:id owner)
+                                            :team-id (:id team)})
+          file        (th/create-file* 1 {:profile-id (:id owner)
+                                         :project-id (:id proj)})
 
           data        {::th/type :create-team-request
                        ::rpc/profile-id (:id requester)
-                       :team-id (:id team)}]
+                       :file-id (:id file)}]
 
       ;; request to team with owner muted should success
       (t/is (th/success? (th/command! data)))
@@ -532,10 +541,14 @@
     (let [owner       (th/create-profile* 1 {:is-active true :email "owner@bar.com"})
           requester   (th/create-profile* 2 {:is-active true :is-muted true :email "requester@bar.com"})
           team        (th/create-team* 1 {:profile-id (:id owner)})
+          proj        (th/create-project* 1 {:profile-id (:id owner)
+                                             :team-id (:id team)})
+          file        (th/create-file* 1 {:profile-id (:id owner)
+                                          :project-id (:id proj)})
 
           data        {::th/type :create-team-request
                        ::rpc/profile-id (:id requester)
-                       :team-id (:id team)}
+                       :file-id (:id file)}
 
           out   (th/command! data)
           edata (-> out :error ex-data)]
@@ -554,11 +567,15 @@
     (let [owner       (th/create-profile* 1 {:is-active true :email "owner@bar.com"})
           requester   (th/create-profile* 2 {:is-active true :email "requester@bar.com"})
           team        (th/create-team* 1 {:profile-id (:id owner)})
+          proj        (th/create-project* 1 {:profile-id (:id owner)
+                                             :team-id (:id team)})
+          file        (th/create-file* 1 {:profile-id (:id owner)
+                                          :project-id (:id proj)})
 
           pool        (:app.db/pool th/*system*)
           data        {::th/type :create-team-request
                        ::rpc/profile-id (:id requester)
-                       :team-id (:id team)}]
+                       :file-id (:id file)}]
 
 
       (th/create-global-complaint-for pool {:type :bounce :email "owner@bar.com"})
@@ -578,11 +595,15 @@
     (let [owner       (th/create-profile* 1 {:is-active true :email "owner@bar.com"})
           requester   (th/create-profile* 2 {:is-active true :email "requester@bar.com"})
           team        (th/create-team* 1 {:profile-id (:id owner)})
+          proj        (th/create-project* 1 {:profile-id (:id owner)
+                                             :team-id (:id team)})
+          file        (th/create-file* 1 {:profile-id (:id owner)
+                                          :project-id (:id proj)})
 
           pool        (:app.db/pool th/*system*)
           data        {::th/type :create-team-request
                        ::rpc/profile-id (:id requester)
-                       :team-id (:id team)}]
+                       :file-id (:id file)}]
 
       ;; request with requester bounce should success
       (th/create-global-complaint-for pool {:type :bounce :email "requester@bar.com"})
