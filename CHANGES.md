@@ -15,6 +15,7 @@
 ### :bug: Bugs fixed
 
 - Fix pencil loader [Taiga #8348](https://tree.taiga.io/project/penpot/issue/8348)
+- Fix can't collapse colors and typographies groups when searching in the assets tab [Taiga #8125](https://tree.taiga.io/project/penpot/issue/8125)
 
 ## 2.1.0 - Things can only get better!
 
