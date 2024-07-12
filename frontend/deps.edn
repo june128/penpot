@@ -25,8 +25,7 @@
 
   instaparse/instaparse {:mvn/version "1.5.0"}
   garden/garden {:git/url "https://github.com/noprompt/garden"
-                 :git/sha "05590ecb5f6fa670856f3d1ab400aa4961047480"}
-  }
+                 :git/sha "05590ecb5f6fa670856f3d1ab400aa4961047480"}}
 
  :aliases
  {:outdated
@@ -45,8 +44,15 @@
     org.clojure/tools.namespace {:mvn/version "RELEASE"}
     cider/cider-nrepl {:mvn/version "0.48.0"}}}
 
-  :shadow-cljs
-  {:main-opts ["-m" "shadow.cljs.devtools.cli"]}
+  :funnel ;; needed for kaocha-cljs2
+  {:main-opts ["-m" "lambdaisland.funnel" "-vvv"]
+   :extra-deps {lambdaisland/funnel {:mvn/version "1.4.71"}}}
 
-  }}
+  :test-kaocha
+  {:main-opts ["-m" "shadow.cljs.devtools.cli"]
+   :extra-deps {lambdaisland/kaocha-cljs2 {:mvn/version "0.2.72"}
+                lambdaisland/chui {:mvn/version "1.2.205"}}}
+
+  :shadow-cljs
+  {:main-opts ["-m" "shadow.cljs.devtools.cli"]}}}
 

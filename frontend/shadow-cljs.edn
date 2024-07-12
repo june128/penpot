@@ -102,8 +102,8 @@
     :warnings {:fn-deprecated false}}}
 
   :lib-penpot
-   {:target :esm
-    :output-dir "resources/public/libs"
+  {:target :esm
+   :output-dir "resources/public/libs"
 
    :modules
    {:penpot {:exports {:renderPage app.libs.render/render-page-export
@@ -139,6 +139,16 @@
      :elide-asserts true
      :anon-fn-naming-policy :off}}}
 
+  :test-kaocha
+  {:target    :browser-test
+   :runner-ns kaocha.cljs2.shadow-runner
+   :test-dir  "target/kaocha-test"
+   :ns-regexp "^frontend-tests.*-test$"
+
+   :devtools {:http-port 1818
+              :http-root "target/kaocha-test"
+              :preloads [lambdaisland.chui.remote]}}
+
   :test
   {:target :node-test
    :output-to "target/tests.cjs"
@@ -152,7 +162,4 @@
     :source-map true
     :source-map-include-sources-content true
     :source-map-detail-level :all
-    :warnings {:fn-deprecated false}}}
-
-  }}
-
+    :warnings {:fn-deprecated false}}}}}
