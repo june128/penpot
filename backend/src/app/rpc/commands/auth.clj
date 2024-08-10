@@ -181,7 +181,8 @@
   [cfg params]
 
   (when-not (contains? cf/flags :registration)
-    (when-not (contains? params :invitation-token)
+    (when-not (and (contains? params :invitation-token)
+                   (contains? cf/flags :login-with-password))
       (ex/raise :type :restriction
                 :code :registration-disabled)))
 
